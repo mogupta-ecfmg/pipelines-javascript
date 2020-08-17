@@ -4,18 +4,45 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
 
 trigger:
-- master
+  - master
 
 pool:
   vmImage: 'ubuntu-latest'
+  
+stages:
+  - stage: build_stage
+    displayName: Build Demo Stage
+    jobs:
+      - job: build_job
+        displayName: Build Demo Job
+        steps:
+        - task: NodeTool@0
+          inputs:
+            versionSpec: '10.x'
+          displayName: 'Install Node.js'
 
-steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '10.x'
-  displayName: 'Install Node.js'
+        - script: |
+            npm install
+            npm run build
+          displayName: 'npm install and build'
+  - stage: deploy_stage
+    displayName: Deploy Demo Stage
+    jobs:
+      - deployment: deploy_job
+        displayName: Deploy Demo Job
+        strategy:
+          runOnce:    #rolling, canary are the other strategies that are supported
+            deploy:
+              steps:
+              - task: AzureFunctionApp@1
+                displayName: 'Azure Function App Deploy: demo-pipeline-app'
+                inputs:
+                  azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
+                  appType: functionAppLinux
+                  appName: 'demo-pipeline-app'
+                  deployToSlotOrASE: true
+                  resourceGroupName: 'mohit-azure-learning'
+                  runtimeStack: 'DOCKER|microsoft/azure-functions-node8:2.0'
+                  startUpCommand: 'npm start'
+        environment: demo 
 
-- script: |
-    npm install
-    npm run build
-  displayName: 'npm install and build'
