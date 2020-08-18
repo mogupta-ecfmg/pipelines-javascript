@@ -65,7 +65,7 @@ stages:
             - task: AzureFunctionApp@1
               displayName: 'Azure Function App Deploy: demo-pipeline-app'
               inputs:
-                azureSubscription: 'Corp01 (007d3e75-42c3-4169-b758-35fc59cf9cc9)'
+                azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
                 appType: functionAppLinux
                 appName: 'demo-pipeline-app'
                 configurationStrings: '-linuxFxVersion NODE|12-lts'
