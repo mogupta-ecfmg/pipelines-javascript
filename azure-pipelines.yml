@@ -1,53 +1,77 @@
-# Node.js
-# Build a general Node.js project with npm.
+# Node.js with React
+# Build a Node.js project that uses React.
 # Add steps that analyze code, save build artifacts, deploy, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
 
 trigger:
-  - master
+  branches:
+    include:
+      - master
+
+variables:
+  vmImage: 'ubuntu-latest'
+  system.debug: true
 
 pool:
   vmImage: 'ubuntu-latest'
-  
+
+
 stages:
-  - stage: build_stage
-    displayName: Build Demo Stage
-    jobs:
-      - job: build_job
-        displayName: Build Demo Job
-        steps:
+ - stage: build_stage
+   displayName: Build Stage
+   jobs:
+     - job: build_job
+       displayName: Build Job
+       steps:
         - task: NodeTool@0
           inputs:
-            versionSpec: '10.x'
+            versionSpec: '12.x'
           displayName: 'Install Node.js'
 
         - script: |
             npm install
             npm run build
           displayName: 'npm install and build'
-  - stage: deploy_stage
-    displayName: Deploy Demo Stage
-    jobs:
-      - deployment: deploy_job
-        displayName: Deploy Demo Job
-        strategy:
-          runOnce:    #rolling, canary are the other strategies that are supported
-            deploy:
-              steps:
-              - task: ExtractFiles@1
-                displayName: 'Extract files '
-                inputs:
-                  archiveFilePatterns: '**/$(Build.BuildId).zip'
-                  destinationFolder: '$(System.DefaultWorkingDirectory)/$(Build.BuildId)/dist'
-              - task: AzureFunctionApp@1
-                displayName: 'Azure Function App Deploy: demo-pipeline-app'
-                inputs:
-                  azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
-                  appType: functionAppLinux
-                  appName: 'demo-pipeline-app'
-                  deployToSlotOrASE: true
-                  resourceGroupName: 'mohit-azure-learning'
-                  runtimeStack: 'DOCKER|microsoft/azure-functions-node8:2.0'
-                  startUpCommand: 'npm start'
-        environment: demo 
+  
+        - task: ArchiveFiles@2
+          inputs:
+            rootFolderOrFile: '$(Build.SourcesDirectory)/demo-pipeline'
+            includeRootFolder: false
+            archiveType: 'zip'
+            archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+            replaceExistingArchive: true
+
+        - task: PublishBuildArtifacts@1
+          inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+            ArtifactName: 'www'
+            publishLocation: 'Container'
+
+ - stage: deploy_stage
+   displayName: Deploy Demo Stage
+   jobs:
+    - deployment: deploy_job
+      displayName: Deploy Demo Job
+      strategy:
+        runOnce:    #rolling, canary are the other strategies that are supported
+          deploy:
+            steps:
+            - task: CopyFiles@2
+              inputs:
+                SourceFolder: '$(Pipeline.Workspace)'
+                Contents: '**/*.zip'
+                TargetFolder: '$(Build.ArtifactStagingDirectory)'
+                flattenFolders: true
+            - task: AzureFunctionApp@1
+              displayName: 'Azure Function App Deploy: demo-pipeline-app'
+              inputs:
+                azureSubscription: 'Corp01 (007d3e75-42c3-4169-b758-35fc59cf9cc9)'
+                appType: functionAppLinux
+                appName: 'demo-pipeline-app'
+                configurationStrings: '-linuxFxVersion NODE|12-lts'
+                package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
+                deploymentMethod: 'runFromPackage'
+                startUpCommand: 'npm i'
+      environment: demo 
+
 
