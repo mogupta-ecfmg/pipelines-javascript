@@ -56,22 +56,53 @@ stages:
         runOnce:    #rolling, canary are the other strategies that are supported
           deploy:
             steps:
+            - task: AzureCLI@2
+              displayName: Create Slot
+              inputs:
+                azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
+                scriptType: 'ps'
+                scriptLocation: 'inlineScript'
+                inlineScript: 'az webapp deployment slot create --name demo-pipeline-app --resource-group mohit-azure-learning --slot xxx'
+                
             - task: CopyFiles@2
+              displayName: Copy File
               inputs:
                 SourceFolder: '$(Pipeline.Workspace)'
                 Contents: '**/*.zip'
                 TargetFolder: '$(Build.ArtifactStagingDirectory)'
                 flattenFolders: true
+            
             - task: AzureFunctionApp@1
-              displayName: 'Azure Function App Deploy: demo-pipeline-app'
+              displayName: Deploy to Slot
               inputs:
                 azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
-                appType: functionAppLinux
+                appType: 'functionAppLinux'
                 appName: 'demo-pipeline-app'
-                configurationStrings: '-linuxFxVersion NODE|12-lts'
-                package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
-                deploymentMethod: 'runFromPackage'
+                deployToSlotOrASE: true
+                resourceGroupName: 'mohit-azure-learning'
+                slotName: 'xxx'
+                package: '$(System.DefaultWorkingDirectory)/**/*.zip'
                 startUpCommand: 'npm i'
+                configurationStrings: '-linuxFxVersion NODE|12-lts'
+                deploymentMethod: 'runFromPackage'
+
+            - task: AzureAppServiceManage@0
+              displayName: Swap Slot
+              inputs:  
+                azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
+                Action: 'Swap Slots'
+                WebAppName: 'demo-pipeline-app'
+                ResourceGroupName: 'mohit-azure-learning'
+                SourceSlot: 'xxx'
+
+            - task: AzureCLI@2
+              displayName: Delete Slot
+              inputs:
+                azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
+                scriptType: 'ps'
+                scriptLocation: 'inlineScript'
+                inlineScript: 'az webapp deployment slot create --name demo-pipeline-app --resource-group mohit-azure-learning --slot xxx'
+
       environment: demo 
 
 
