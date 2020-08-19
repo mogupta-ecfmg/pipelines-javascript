@@ -47,22 +47,23 @@ stages:
             ArtifactName: 'www'
             publishLocation: 'Container'
 
- - stage: deploy_stage
-   displayName: Deploy Demo Stage
+ - stage: deploy_qa_stage
+   displayName: Deploy QA Stage
    jobs:
-    - deployment: deploy_job
-      displayName: Deploy Demo Job
+    - deployment: deploy_qa_job
+      displayName: Deploy QA Job
       strategy:
         runOnce:    #rolling, canary are the other strategies that are supported
           deploy:
             steps:
             - task: AzureCLI@2
-              displayName: Create Slot
               inputs:
                 azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
-                scriptType: 'ps'
+                scriptType: 'bash'
                 scriptLocation: 'inlineScript'
-                inlineScript: 'az webapp deployment slot create --name demo-pipeline-app --resource-group mohit-azure-learning --slot xxx'
+                inlineScript: |
+                  az functionapp deployment slot create --name mg-function-app-001
+                  --resource-group mohit-azure-group --slot xxx
                 
             - task: CopyFiles@2
               displayName: Copy File
@@ -77,11 +78,11 @@ stages:
               inputs:
                 azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
                 appType: 'functionAppLinux'
-                appName: 'demo-pipeline-app'
+                appName: 'mg-function-app-001'
                 deployToSlotOrASE: true
-                resourceGroupName: 'mohit-azure-learning'
+                resourceGroupName: 'mohit-azure-group'
                 slotName: 'xxx'
-                package: '$(System.DefaultWorkingDirectory)/**/*.zip'
+                package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
                 startUpCommand: 'npm i'
                 configurationStrings: '-linuxFxVersion NODE|12-lts'
                 deploymentMethod: 'runFromPackage'
@@ -91,18 +92,18 @@ stages:
               inputs:  
                 azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
                 Action: 'Swap Slots'
-                WebAppName: 'demo-pipeline-app'
-                ResourceGroupName: 'mohit-azure-learning'
+                WebAppName: 'mg-function-app-001'
+                ResourceGroupName: 'mohit-azure-group'
                 SourceSlot: 'xxx'
 
             - task: AzureCLI@2
               displayName: Delete Slot
               inputs:
                 azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
-                scriptType: 'ps'
+                scriptType: 'bash'
                 scriptLocation: 'inlineScript'
-                inlineScript: 'az webapp deployment slot create --name demo-pipeline-app --resource-group mohit-azure-learning --slot xxx'
+                inlineScript: 'az functionapp deployment slot delete --name mg-function-app-001 --resource-group mohit-azure-group --slot xxx'
 
-      environment: demo 
+      environment: qa 
 
 
