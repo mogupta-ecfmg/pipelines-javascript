@@ -23,9 +23,6 @@ stages:
      - job: build_job
        displayName: Build Job
        steps:
-        - task: Delay@1
-          inputs:
-            delayForMinutes: '1'
 
         - task: NodeTool@0
           inputs:
