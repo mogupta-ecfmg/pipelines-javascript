@@ -1,0 +1,63 @@
+# Node.js with React
+# Build a Node.js project that uses React.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
+
+resources:
+  pipelines:
+  - pipeline: DemoBuildQA
+    source: demo-build-qa
+
+
+stages:
+ - stage: deploy_staging_stage
+   displayName: Deploy Staging Stage
+   jobs:
+    - deployment: deploy_staging_job
+      displayName: Deploy Staging Job
+      strategy:
+        runOnce:    #rolling, canary are the other strategies that are supported
+          deploy:
+            steps:
+            - task: AzureCLI@2
+              displayName: Delete Slot
+              inputs:
+                azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
+                scriptType: 'bash'
+                scriptLocation: 'inlineScript'
+                inlineScript: 'az functionapp deployment slot delete --name mg-function-app-002 --resource-group mohit-azure-group --slot staging'
+
+            - task: AzureCLI@2
+              displayName: Create Slot
+              inputs:
+                azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
+                scriptType: 'bash'
+                scriptLocation: 'inlineScript'
+                inlineScript: |
+                  az functionapp deployment slot create --name mg-function-app-002 --resource-group mohit-azure-group --slot staging
+                
+            - task: CopyFiles@2
+              displayName: Copy File
+              inputs:
+                SourceFolder: '$(Pipeline.Workspace)'
+                Contents: '**/*.zip'
+                TargetFolder: '$(Build.ArtifactStagingDirectory)'
+                flattenFolders: true
+            
+            - task: AzureFunctionApp@1
+              displayName: Deploy to Slot
+              inputs:
+                azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
+                appType: 'functionAppLinux'
+                appName: 'mg-function-app-002'
+                deployToSlotOrASE: true
+                resourceGroupName: 'mohit-azure-group'
+                slotName: 'staging'
+                package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
+                startUpCommand: 'npm i'
+                configurationStrings: '-linuxFxVersion NODE|12-lts'
+                deploymentMethod: 'runFromPackage'
+
+      environment: qa 
+
+
