@@ -1,21 +1,123 @@
-# Node.js
-# Build a general Node.js project with npm.
+# Node.js with React
+# Build a Node.js project that uses React.
 # Add steps that analyze code, save build artifacts, deploy, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
 
-trigger:
-- master
+resources:
+  pipelines:
+  - pipeline: DemoBuildQA   # Name of the pipeline resource
+    source: demo-build-qa # Name of the pipeline referenced by the pipeline resource
+    trigger:
+      branches:
+        include:
+        - master
+  
+
+variables:
+  vmImage: 'ubuntu-latest'
+  system.debug: true
 
 pool:
   vmImage: 'ubuntu-latest'
 
-steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '10.x'
-  displayName: 'Install Node.js'
 
-- script: |
-    npm install
-    npm run build
-  displayName: 'npm install and build'
+stages:
+ - stage: build_stage
+   displayName: Build Stage
+   jobs:
+     - job: build_job
+       displayName: Build Job
+       steps:
+
+        - task: NodeTool@0
+          inputs:
+            versionSpec: '12.x'
+          displayName: 'Install Node.js'
+
+        - script: |
+            npm install
+            npm run build
+          displayName: 'npm install and build'
+  
+        - task: ArchiveFiles@2
+          inputs:
+            rootFolderOrFile: '$(Build.SourcesDirectory)'
+            includeRootFolder: false
+            archiveType: 'zip'
+            archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+            replaceExistingArchive: true
+
+        - task: PublishBuildArtifacts@1
+          inputs:
+            PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+            ArtifactName: 'www'
+            publishLocation: 'Container'
+
+ - stage: deploy_qa_stage
+   displayName: Deploy QA Stage
+   jobs:
+    - deployment: deploy_qa_job
+      displayName: Deploy QA Job
+      strategy:
+        runOnce:    #rolling, canary are the other strategies that are supported
+          deploy:
+            steps:
+            - task: AzureCLI@2
+              displayName: Delete Slot
+              inputs:
+                azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
+                scriptType: 'bash'
+                scriptLocation: 'inlineScript'
+                inlineScript: 'az functionapp deployment slot delete --name mg-function-app-002 --resource-group mohit-azure-group --slot xxx'
+
+            - task: AzureCLI@2
+              displayName: Create Slot
+              inputs:
+                azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
+                scriptType: 'bash'
+                scriptLocation: 'inlineScript'
+                inlineScript: |
+                  az functionapp deployment slot create --name mg-function-app-002 --resource-group mohit-azure-group --slot xxx
+                
+            - task: CopyFiles@2
+              displayName: Copy File
+              inputs:
+                SourceFolder: '$(Pipeline.Workspace)'
+                Contents: '**/*.zip'
+                TargetFolder: '$(Build.ArtifactStagingDirectory)'
+                flattenFolders: true
+            
+            - task: AzureFunctionApp@1
+              displayName: Deploy to Slot
+              inputs:
+                azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
+                appType: 'functionAppLinux'
+                appName: 'mg-function-app-002'
+                deployToSlotOrASE: true
+                resourceGroupName: 'mohit-azure-group'
+                slotName: 'xxx'
+                package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
+                startUpCommand: 'npm i'
+                configurationStrings: '-linuxFxVersion NODE|12-lts'
+                deploymentMethod: 'runFromPackage'
+
+            - task: AzureAppServiceManage@0
+              displayName: Swap Slot
+              inputs:  
+                azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
+                Action: 'Swap Slots'
+                WebAppName: 'mg-function-app-002'
+                ResourceGroupName: 'mohit-azure-group'
+                SourceSlot: 'xxx'
+
+            - task: AzureCLI@2
+              displayName: Delete Slot
+              inputs:
+                azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
+                scriptType: 'bash'
+                scriptLocation: 'inlineScript'
+                inlineScript: 'az functionapp deployment slot delete --name mg-function-app-002 --resource-group mohit-azure-group --slot xxx'
+
+      environment: qa 
+
+
