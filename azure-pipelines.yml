@@ -17,17 +17,25 @@ pool:
   vmImage: 'ubuntu-latest'
 
 
+
+
 stages:
+ - stage: init_delay_stage
+   displayName: Init Delay Stage
+   jobs:
+     - job: init_delay_job
+       displayName: Init Delay Job
+       steps:
+         - task: Delay@1
+           inputs:
+            delayForMinutes: '5'
+
  - stage: build_stage
    displayName: Build Stage
    jobs:
      - job: build_job
        displayName: Build Job
        steps:
-
-        - task: Delay@1
-          inputs:
-            delayForMinutes: '5'
 
         - task: NodeTool@0
           inputs:
