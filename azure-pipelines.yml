@@ -26,9 +26,12 @@ stages:
      - job: init_delay_job
        displayName: Init Delay Job
        steps:
-         - task: Delay@1
+         - task: AzureCLI@2
            inputs:
-            delayForMinutes: '5'
+              azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: 'sleep 5m'
 
  - stage: build_stage
    displayName: Build Stage
