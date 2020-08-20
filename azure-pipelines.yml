@@ -25,6 +25,10 @@ stages:
        displayName: Build Job
        steps:
 
+        - task: Delay@1
+          inputs:
+            delayForMinutes: '2'
+            
         - task: NodeTool@0
           inputs:
             versionSpec: '12.x'
