@@ -40,6 +40,6 @@ stages:
                 scriptLocation: 'inlineScript'
                 inlineScript: 'az functionapp deployment slot delete --name mg-function-app-002 --resource-group mohit-azure-group --slot staging'
 
-      environment: qa 
+      environment: prod
 
 

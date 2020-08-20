@@ -31,38 +31,42 @@ stages:
               azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
-              inlineScript: 'sleep 5m'
+              inlineScript: 'sleep 1m'
 
- - stage: build_stage
-   displayName: Build Stage
+
+ - stage: build_qa_stage
+   displayName: Build QA Stage
    jobs:
-     - job: build_job
-       displayName: Build Job
-       steps:
+     - deployment: build_qa_job
+       displayName: Build QA Job
+       strategy:
+        runOnce:    #rolling, canary are the other strategies that are supported
+          deploy:
+            steps:
 
-        - task: NodeTool@0
-          inputs:
-            versionSpec: '12.x'
-          displayName: 'Install Node.js'
+            - task: NodeTool@0
+              inputs:
+                versionSpec: '12.x'
+              displayName: 'Install Node.js'
 
-        - script: |
-            npm install
-            npm run build
-          displayName: 'npm install and build'
-  
-        - task: ArchiveFiles@2
-          inputs:
-            rootFolderOrFile: '$(Build.SourcesDirectory)'
-            includeRootFolder: false
-            archiveType: 'zip'
-            archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
-            replaceExistingArchive: true
+            - script: |
+                npm install
+                npm run build
+              displayName: 'npm install and build'
+      
+            - task: ArchiveFiles@2
+              inputs:
+                rootFolderOrFile: '$(Build.SourcesDirectory)'
+                includeRootFolder: false
+                archiveType: 'zip'
+                archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+                replaceExistingArchive: true
 
-        - task: PublishBuildArtifacts@1
-          inputs:
-            PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-            ArtifactName: 'www'
-            publishLocation: 'Container'
+            - task: PublishBuildArtifacts@1
+              inputs:
+                PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+                ArtifactName: 'www'
+                publishLocation: 'Container'
 
-
+       environment: qa
 

@@ -59,6 +59,6 @@ stages:
                 configurationStrings: '-linuxFxVersion NODE|12-lts'
                 deploymentMethod: 'runFromPackage'
 
-      environment: qa 
+      environment: staging
 
 
