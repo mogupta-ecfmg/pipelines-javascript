@@ -7,8 +7,12 @@ resources:
   pipelines:
   - pipeline: DemoBuildQA
     source: demo-build-qa
-    trigger: true
-
+    # trigger: true
+    trigger:
+      batch: true
+      branches:  
+        exclude:
+          - master
 
 stages:
  - stage: deploy_staging_stage
