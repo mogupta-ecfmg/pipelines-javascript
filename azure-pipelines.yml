@@ -58,6 +58,14 @@ stages:
           deploy:
             steps:
             - task: AzureCLI@2
+              displayName: Delete Slot
+              inputs:
+                azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
+                scriptType: 'bash'
+                scriptLocation: 'inlineScript'
+                inlineScript: 'az functionapp deployment slot delete --name mg-function-app-002 --resource-group mohit-azure-group --slot xxx'
+
+            - task: AzureCLI@2
               displayName: Create Slot
               inputs:
                 azureSubscription: 'Visual Studio Enterprise (5cfa6876-89d2-4592-9cb5-af807d306c78)'
